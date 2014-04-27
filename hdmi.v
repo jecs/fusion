@@ -1,24 +1,6 @@
 `default_nettype none
 
-`define hdmi720p
-
-`ifdef hdmi720p
-`define HBW  11
-`define VBW  10
-
-`define HTOT  `HBW'd1650
-`define HFP   `HBW'd110
-`define HRES  `HBW'd1280
-`define HBP   `HBW'd220
-`define HSYNC `HBW'd40
-
-`define VTOT  `VBW'd750
-`define VFP   `VBW'd5
-`define VRES  `VBW'd720
-`define VBP   `VBW'd20
-`define VSYNC `VBW'd5
-`endif
-
+`include "hdmi.h"
 
 module hdmi_generator
 (
@@ -175,6 +157,43 @@ end
 
 always @(*) begin
 	de = hde & vde;
+end
+
+always @(*) begin
+	vclock = ~clock;
+end
+
+endmodule
+
+module  hdmi_test_pattern_generator
+(
+	input wire clock,
+	input wire reset,
+	input wire hs_in,
+	input wire vs_in,
+	input wire de_in,
+	input wire vclock_in,
+	input wire [`HBW-1:0] x,
+	input wire [`VBW-1:0] y,
+	output reg hs_out,
+	output reg vs_out,
+	output reg de_out,
+	output reg vclock_out,
+	output [`PBW-1:0] reg data_out
+);
+
+reg intensity;
+
+always @(posedge clock) begin
+	hs_out <= hs_in;
+	vs_out <= vs_in;
+	de_out <= de_in;
+	intensity <= (x[4:0] < 5'd16) & (y[4:0] < 5'd16);
+end
+
+always @(*) begin
+	vclock_out = vclock_in;
+	data_out = {`PBW{intensity}};
 end
 
 endmodule
