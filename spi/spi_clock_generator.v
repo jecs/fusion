@@ -1,3 +1,5 @@
+`default_nettype none
+
 module spi_clock_generator(
 	clock,
 	reset,

@@ -1,59 +1,65 @@
+`default_nettype none
+
 module spi_master_fsm(
 	clock,
 	reset,
-	bit_in,
+	msg_bit,
 	sclk_in,
 	start,
 	low_t,
 	high_t,
 	last_bit,
-	done,
-	mosi,
+	last_msg,
+	restart,
 	ss_n,
-	inc_bit,
-	idle,
 	sclk_out,
-	count
+	inc_bit,
+	inc_msg,
+	waiting
 );
 
 	input wire clock;
 	input wire reset;
 	
-	input wire bit_in;
+	input wire msg_bit;
 	input wire sclk_in;
+
 	input wire start;
 	input wire low_t;
 	input wire high_t;
 	input wire last_bit;
-	input wire done;
+	input wire last_msg;
+	input wire waiting;
 	
-	output reg mosi;
 	output reg ss_n;
-	output reg inc_bit;
-	output reg idle;
 	output reg sclk_out;
-	output reg count;
+	output reg mosi;
+	output reg inc_bit;
+	output reg inc_msg;
+	output reg waiting;
 	
-	wire [4:0] control;
+	reg [5:0] control;
 	reg [5:0] outputs;
 	
-	parameter IDLE     = 7'b0000001;
-	parameter SELECT   = 7'b0000010;
-	parameter SET      = 7'b0000100;
-	parameter TRANSMIT = 7'b0001000;
-	parameter INC      = 7'b0010000;
-	parameter FINISH   = 7'b0100000;
-	parameter WAIT     = 7'b1000000;
-	reg [6:0] state = IDLE;
+	parameter IDLE     = 8'b00000001;
+	parameter SELECT   = 8'b00000010;
+	parameter SET      = 8'b00000100;
+	parameter TRANSMIT = 8'b00001000;
+	parameter INC_BIT  = 8'b00010000;
+	parameter FINISH   = 8'b00100000;
+	parameter INC_MSG  = 8'b01000000;
+	parameter WAIT     = 8'b10000000;
+	reg [7:0] state = IDLE;
 	
 	always @(*) begin
-		control = {start, low_t, high_t, last_bit, done};
-		mosi = outputs[5];
-		ss_n = outputs[4];
-		inc_bit = outputs[3];
-		idle = outputs[2];
-		sclk_out = outputs[1];
-		count = outputs[0];
+		control = {start, low_t, high_t, last_bit, last_msg, restart};
+		
+		ss_n     = outputs[5];
+		sclk_out = outputs[4];
+		mosi     = outputs[3];
+		inc_bit  = outputs[2];
+		inc_msg  = outputs[1];
+		waiting  = outputs[0];
 	end
 	
 	always @(posedge clock) begin
@@ -62,32 +68,36 @@ module spi_master_fsm(
 		end
 		else case(state)
 			IDLE: casex(control)
-				5'd0XXXX: state <= IDLE;
-				5'd1XXXX: state <= SELECT;
+				6'b0XXXXX: state <= IDLE;
+				6'b1XXXXX: state <= SELECT;
 			endcase
 			SELECT: casex(control)
-				5'dXX0XX: state <= SELECT;
-				5'dXX1XX: state <= SET;
+				6'bXX0XXX: state <= SELECT;
+				6'bXX1XXX: state <= SET;
 			endcase
 			SET: casex(control)
-				5'dX0XXX: state <= SET;
-				5'dX1XXX: state <= TRANSMIT;
+				6'bX0XXXX: state <= SET;
+				6'bX1XXXX: state <= TRANSMIT;
 			endcase
 			TRANSMIT: casex(control)
-				5'dX0XXX: state <= TRANSMIT;
-				5'dX1XXX: state <= INC;
+				6'bX0XXXX: state <= TRANSMIT;
+				6'bX1XXXX: state <= INC_BIT;
 			endcase
-			INC: casex(control)
-				5'dXXX0X: state <= TRANSMIT;
-				5'dXXX1X: state <= FINISH;
+			INC_BIT: casex(control)
+				6'bXXX0XX: state <= TRANSMIT;
+				6'bXXX1XX: state <= FINISH;
 			endcase
 			FINISH: casex(control)
-				5'dX0XXX: state <= FINISH;
-				5'dX1XXX: state <= WAIT;
+				6'bX0XXXX: state <= FINISH;
+				6'bX1XXXX: state <= INC_MSG;
+			endcase
+			INC_MSG: casex(control)
+				6'bXXXX0X: state <= WAIT;
+				6'bXXXX1X: state <= IDLE;
 			endcase
 			WAIT: casex(control)
-				5'dXXXX0: state <= WAIT;
-				5'dXXXX1: state <= IDLE;
+				6'bXXXXX0: state <= WAIT;
+				6'bXXXXX1: state <= SELECT;
 			endcase
 			default: state <= IDLE;
 		endcase
@@ -95,14 +105,15 @@ module spi_master_fsm(
 	
 	always @(*) begin
 		case(state)
-			IDLE:     outputs = 6'b010100;
-			SELECT:   outputs = 6'b010000;
+			IDLE:     outputs = 6'b100000;
+			SELECT:   outputs = 6'b100000;
 			SET:      outputs = 6'b000000;
-			TRANSMIT: outputs = {bit_in, 3'b000, sclk_in, 0};
-			INC:      outputs = {bit_in, 3'b010, sclk_in, 0};
+			TRANSMIT: outputs = {1'b0, sclk_in, msg_bit, 3'b000};
+			INC_BIT:  outputs = {1'b0, sclk_in, msg_bit, 3'b100};
 			FINISH:   outputs = 6'b000000;
-			WAIT:     outputs = 6'b010001;
-			default:  outputs = 6'b010100;
+			INC_MSG:  outputs = 6'b100010;
+			WAIT:     outputs = 6'b100001;
+			default:  outputs = 6'b100000;
 		endcase
 	end
 endmodule
