@@ -9,8 +9,6 @@ module hdmi_generator
 	output reg hs,
 	output reg vs,
 	output reg de,
-	output reg vclock,
-	output reg request,
 	// x and y associated with current timestep
 	// values will be delayed later on, in another module
 	output reg [`HBW-1:0] x,
@@ -35,19 +33,19 @@ reg end_of_vbp;
 // triggers for the different regions
 always @(*) begin
 	end_of_hsync = (hcount == `HSYNC-`HBW'd1);
-	end_of_hfp   = (hcount == `HSYNC+`HFP-`HBW'd1);
-	end_of_hvis  = (hcount == `HSYNC+`HFP+`HRES-`HBW'd1);
-	end_of_hbp   = (hcount == `HTOT-`HBW'd1);
+	end_of_hbp   = (hcount == `HSYNC+`HBP-`HBW'd1);
+	end_of_hvis  = (hcount == `HSYNC+`HBP+`HRES-`HBW'd1);
+	end_of_hfp   = (hcount == `HTOT-`HBW'd1);
 
 	end_of_vsync = (vcount == `VSYNC-`VBW'd1);
-	end_of_vfp   = (vcount == `VSYNC+`VFP-`VBW'd1);
-	end_of_vvis  = (vcount == `VSYNC+`VFP+`VRES-`VBW'd1);
-	end_of_vbp   = (vcount == `VTOT-`VBW'd1);
+	end_of_vbp   = (vcount == `VSYNC+`VBP-`VBW'd1);
+	end_of_vvis  = (vcount == `VSYNC+`VBP+`VRES-`VBW'd1);
+	end_of_vfp   = (vcount == `VTOT-`VBW'd1);
 end
 
 // vcount & hcount
 always @(posedge clock) begin
-	if(reset || end_of_hbp) begin
+	if(reset || end_of_hfp) begin
 		hcount <= `HBW'd0;
 	end
 	else begin
@@ -57,10 +55,10 @@ always @(posedge clock) begin
 	if(reset) begin
 		vcount <= `VBW'd0;
 	end
-	else if(!end_of_hbp) begin
+	else if(!end_of_hfp) begin
 		vcount <= vcount;
 	end
-	else if(!end_of_vbp) begin
+	else if(!end_of_vfp) begin
 		vcount <= vcount + `VBW'd1;
 	end
 	else begin
@@ -70,21 +68,37 @@ end
 
 // hsync & vsync
 always @(posedge clock) begin
-	if(reset || end_of_hbp) begin
-		hs <= 1'b1;
+	if(reset || end_of_hfp) begin
+		`ifdef NEG_POL
+			hs <= 1'b0;
+		`else
+			hs <= 1'b1;
+		`endif
 	end
 	else if(end_of_hsync) begin
-		hs <= 1'b0;
+		`ifdef NEG_POL
+			hs <= 1'b1;
+		`else
+			hs <= 1'b0;
+		`endif
 	end
 	else begin
 		hs <= hs;
 	end
 
-	if(reset) begin
-		vs <= 1'b1;
+	if(reset || (end_of_vfp && end_of_hfp)) begin
+		`ifdef NEG_POL
+			vs <= 1'b0;
+		`else
+			vs <= 1'b1;
+		`endif
 	end
-	else if(end_of_vsync && end_of_hbp) begin
-		vs <= 1'b0;
+	else if(end_of_vsync && end_of_hfp) begin
+		`ifdef NEG_POL
+			vs <= 1'b1;
+		`else
+			vs <= 1'b0;
+		`endif
 	end
 	else begin
 		vs <= vs;
@@ -128,7 +142,7 @@ always @(posedge clock) begin
 	if(reset) begin
 		hde <= 1'b0;
 	end
-	else if(end_of_hfp) begin
+	else if(end_of_hbp) begin
 		hde <= 1'b1;
 	end
 	else if(end_of_hvis) begin
@@ -141,10 +155,10 @@ always @(posedge clock) begin
 	if(reset) begin
 		vde <= 1'b0;
 	end
-	else if(!end_of_hbp) begin
+	else if(!end_of_hfp) begin
 		vde <= vde;
 	end
-	else if(end_of_vfp) begin
+	else if(end_of_vbp) begin
 		vde <= 1'b1;
 	end
 	else if(end_of_vvis) begin
@@ -159,10 +173,6 @@ always @(*) begin
 	de = hde & vde;
 end
 
-always @(*) begin
-	vclock = ~clock;
-end
-
 endmodule
 
 module  hdmi_test_pattern_generator
@@ -172,14 +182,12 @@ module  hdmi_test_pattern_generator
 	input wire hs_in,
 	input wire vs_in,
 	input wire de_in,
-	input wire vclock_in,
 	input wire [`HBW-1:0] x,
 	input wire [`VBW-1:0] y,
 	output reg hs_out,
 	output reg vs_out,
 	output reg de_out,
-	output reg vclock_out,
-	output [`PBW-1:0] reg data_out
+	output reg [`PBW-1:0] data_out
 );
 
 reg intensity;
@@ -192,7 +200,6 @@ always @(posedge clock) begin
 end
 
 always @(*) begin
-	vclock_out = vclock_in;
 	data_out = {`PBW{intensity}};
 end
 
