@@ -1,5 +1,5 @@
 `default_nettype none
-//`define TESTING_I2C
+`define TESTING_I2C
 
 module i2c_clock_generator(
 	clock,

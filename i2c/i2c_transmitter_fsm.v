@@ -29,11 +29,11 @@ module i2c_transmitter_fsm(
 	reg [3:0] control;
 	reg [2:0] outputs;
 
-	parameter INIT   = 5'b000001;
-	parameter START  = 5'b000010;
-	parameter TRANS  = 5'b000100;
-	parameter UPDATE = 5'b001000;
-	parameter WAIT   = 5'b010000;
+	parameter INIT   = 5'b00001;
+	parameter START  = 5'b00010;
+	parameter TRANS  = 5'b00100;
+	parameter UPDATE = 5'b01000;
+	parameter WAIT   = 5'b10000;
 	reg [4:0] state = INIT;
 
 	always @(*) begin
