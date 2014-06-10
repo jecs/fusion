@@ -12,6 +12,7 @@ module spi_start_timer(
 
 	reg counting = 1'b1;
 	parameter COUNT = 28'd150000000; // 0.75s
+	//parameter COUNT = 28'd100;
 	parameter ZERO = 28'd0;
 	parameter ONE = 28'd1;
 	reg [27:0] count = 28'd0;

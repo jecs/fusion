@@ -3,14 +3,18 @@
 module spi_master(
 	clock,
 	reset,
+	start,
 	ss_n,
-	sclk
+	sclk,
+	mosi
 );
 
 	input wire clock;
 	input wire reset;
+	input wire start;
 	output wire ss_n;
 	output wire sclk;
+	output wire mosi;
 
 	wire msg_bit;
 	wire sclk_in;
@@ -23,6 +27,7 @@ module spi_master(
 	wire inc_bit;
 	wire inc_msg;
 	wire waiting;
+	assign start_fsm = start;
 
 	spi_clock_generator spi_clock(
 		.clock(clock),
@@ -42,11 +47,13 @@ module spi_master(
 		.msg_bit(msg_bit)
 	);
 
+	/*
 	spi_start_timer spi_start(
 		.clock(clock),
 		.reset(reset),
 		.start(start_fsm)
 	);
+	*/
 
 	spi_restart_timer spi_restart(
 		.clock(clock),
@@ -69,6 +76,7 @@ module spi_master(
 		.restart(restart_fsm),
 		.ss_n(ss_n),
 		.sclk_out(sclk),
+		.mosi(mosi),
 		.inc_bit(inc_bit),
 		.inc_msg(inc_msg),
 		.waiting(waiting)

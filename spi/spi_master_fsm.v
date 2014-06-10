@@ -13,6 +13,7 @@ module spi_master_fsm(
 	restart,
 	ss_n,
 	sclk_out,
+	mosi,
 	inc_bit,
 	inc_msg,
 	waiting
@@ -29,7 +30,7 @@ module spi_master_fsm(
 	input wire high_t;
 	input wire last_bit;
 	input wire last_msg;
-	input wire waiting;
+	input wire restart;
 	
 	output reg ss_n;
 	output reg sclk_out;

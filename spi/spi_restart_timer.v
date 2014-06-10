@@ -14,7 +14,7 @@ module spi_restart_timer(
 	input wire count;
 
 	output reg done;
-	parameter COUNT = 4'd2;
+	parameter COUNT = 4'd8;
 	reg [3:0] counter = 4'd0;
 
 	always @(posedge clock) begin
