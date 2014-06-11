@@ -33,21 +33,28 @@ module hdmi_8pix(
 	input wire [63:0] data_in;
 
 	reg [7:0] intensity;
-	reg [3:0] pixel = 4'd0;
-	reg [6:0] pixel_start;
-	reg [6:0] pixel_end;
+	reg [2:0] pixel = 3'd0;
 
 	always @(posedge clock) begin
 		hs_out <= hs_in;
 		vs_out <= vs_out;
 		de_out <= de_in;
-		pixel <= {1'b0, x[2:0]};
-		pixel_start <= (pixel+4'd1)*8-1;
-		pixel_end   <= pixel*8;
+		pixel <= x[2:0];
 	end
 
 	always @(*) begin
-		intensity = data_in[pixel_start:pixel_end];
-		data_in = {3{intensity, 4'd0}};
+		addr = y*240+x[`HBW-1:3];
+		case(pixel)
+			3'd0: intensity = data_in[63:56];
+			3'd1: intensity = data_in[55:48];
+			3'd2: intensity = data_in[47:40];
+			3'd3: intensity = data_in[39:32];
+			3'd4: intensity = data_in[31:24];
+			3'd5: intensity = data_in[23:16];
+			3'd6: intensity = data_in[15:8];
+			3'd7: intensity = data_in[7:0];
+		endcase
+			
+		data_out = {3{intensity, 4'd0}};
 	end
 endmodule

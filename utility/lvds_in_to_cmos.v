@@ -13,7 +13,7 @@ module lvds_in_to_cmos (
 
 	genvar i;
 	generate
-		for(i = 0;i < BUS_WIDTH;i++) begin: BUFFER
+		for(i = 0;i < BUS_WIDTH;i=i+1) begin: BUFFER
 			IBUFDS #( 
 				.DIFF_TERM("TRUE"), // Differential Termination 
 				.IBUF_LOW_PWR("TRUE"), // Low power="TRUE", Highest performance="FALSE" 
