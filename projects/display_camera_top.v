@@ -43,7 +43,7 @@ module display_camera_top(
 	inout wire i2c_sda;
 	input wire sysclk_p;
 	input wire sysclk_n;
-	output reg [7:0] gpio_led;
+	output wire [7:0] gpio_led;
 	output wire hdmi_de;
 	output wire hdmi_vsync;
 	output wire hdmi_hsync;
@@ -59,6 +59,7 @@ module display_camera_top(
 	output wire spi_sclk;
 	output wire spi_ssel_n;
 	output wire pg_c2m;
+	output wire clk_pll;
 	input wire prsnt_m2c_l;
 	output wire cam_reset_n;
 	output wire vadj_on_b;
@@ -82,10 +83,13 @@ module display_camera_top(
 	wire [`HBW-1:0] x_gen;
 	wire [`VBW-1:0] y_gen;
 
-	/* VITA2K SIGNALS */
+	/* MEMORY SIGNALS */
 	wire [18:0] vita2000_addr;
 	wire [63:0] vita2000_data;
 	wire vita2000_we;
+	wire vita2000_clock;
+	wire [18:0] hdmi_addr;
+	wire [63:0] hdmi_read;
 
 	/* NECESSARY ASSIGNMENTS */
 	assign reset = 1'b0;
@@ -93,11 +97,17 @@ module display_camera_top(
 	assign gpio_led = 8'h00;
 	
 	clock_generator clock_generator(
-		.diff_clock_p(sysclk_p),
-		.diff_clock_n(sysclk_n),
+		.clock_ds_p(sysclk_p),
+		.clock_ds_n(sysclk_n),
 		.system_clock(clock),
 		.hdmi_clock(pixel_clock),
 		.hdmi_clock_inv(hdmi_clock)
+	);
+	
+	pll_clock_gen pll (
+		.clk_in1_p(sysclk_p),
+		.clk_in1_n(sysclk_n),
+		.pll_clk(clk_pll)
 	);
 
 	/* TIMERS FOR SERIAL INITIALIZERS */	
@@ -116,7 +126,7 @@ module display_camera_top(
 	);
 
 	start_timer #(
-		.TIME=32'd10000000
+		.TIME(32'd10000000)
 	) pmbus_st(
 		.clock(clock),
 		.reset(reset),
@@ -125,7 +135,7 @@ module display_camera_top(
 	);
 	
 	start_timer #(
-		.TIME=32'd20000000
+		.TIME(32'd20000000)
 	) pg_st(
 		.clock(clock),
 		.reset(reset),
@@ -137,7 +147,7 @@ module display_camera_top(
 	pmbus_ti9248_init vadj_init(
 		.clock(clock),
 		.reset(reset),
-		.start(start),
+		.start(pmbus_start),
 		.scl(pmbus_clock),
 		.sda(pmbus_data),
 		.reading_sda()
@@ -146,7 +156,7 @@ module display_camera_top(
 	i2c_adv7511_init hdmi_i2c(
 		.clock(clock),
 		.reset(reset),
-		.start(i2c_start),
+		.start(hdmi_i2c_start),
 		.scl(i2c_scl),
 		.sda(i2c_sda),
 		.reading_sda()
@@ -173,8 +183,7 @@ module display_camera_top(
 		.y(y_gen)
 	);
 	
-	hdmi_test_pattern_generator hdmi_test_gen
-	(
+	hdmi_8pix hdmi8(
 		.clock(pixel_clock),
 		.reset(reset),
 		.hs_in(hs_gen),
@@ -185,7 +194,9 @@ module display_camera_top(
 		.hs_out(hdmi_hsync),
 		.vs_out(hdmi_vsync),
 		.de_out(hdmi_de),
-		.data_out(hdmi_data)
+		.data_out(hdmi_data),
+		.addr(hdmi_addr),
+		.data_in(hdmi_read)
 	);
 
 	vita2000_capture vita2000c(
@@ -199,6 +210,20 @@ module display_camera_top(
 		.w_addr(vita2000_addr),
 		.w_data(vita2000_data),
 		.we(vita2000_we)
+	);
+	
+	blk_mem_gen_0 mem (
+	  .clka(pixel_clock),    // input wire clka
+	  .ena(1'b1),      // input wire ena
+	  .wea(1'b0),      // input wire [0 : 0] wea
+	  .addra(hdmi_addr[16:0]),  // input wire [16 : 0] addra
+	  .dina(64'd0),    // input wire [63 : 0] dina
+	  .douta(hdmi_read),  // output wire [63 : 0] douta
+	  .clkb(vita2000_clock),    // input wire clkb
+	  .web(vita2000_we),      // input wire [0 : 0] web
+	  .addrb(vita2000_addr[16:0]),  // input wire [16 : 0] addrb
+	  .dinb(vita2000_data),    // input wire [63 : 0] dinb
+	  .doutb()  // output wire [63 : 0] doutb
 	);
 
 endmodule
