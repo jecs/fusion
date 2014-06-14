@@ -71,20 +71,20 @@ module recorder(
 			always @(posedge par_clock) begin
 				case(data_valid_count)
 					2'd0: begin
-						pixels[(16*i+7):(16*i)]    <= cam_d[(8*i+7):8*i];
-						pixels[(16*i+15):(16*i+8)] <= pixels[(16*i+15):(16*i+8)];
-					end
-					2'd1: begin
-						pixels[(16*i+7):(16*i)]    <= pixels[(16*i+7):(16*i)];
-						pixels[(16*i+15):(16*i+8)] <= cam_d[(8*i+7):8*i];
-					end
-					2'd2: begin
 						pixels[(63-16*i):(56-16*i)] <= cam_d[(8*i+7):8*i];
 						pixels[(55-16*i):(48-16*i)] <= pixels[(55-16*i):(48-16*i)];
 					end
-					2'd3: begin
+					2'd1: begin
 						pixels[(63-16*i):(56-16*i)] <= pixels[(63-16*i):(56-16*i)];
 						pixels[(55-16*i):(48-16*i)] <= cam_d[(8*i+7):8*i];
+					end
+					2'd2: begin
+						pixels[(16*i+7):(16*i)]    <= cam_d[(8*i+7):8*i];
+						pixels[(16*i+15):(16*i+8)] <= pixels[(16*i+15):(16*i+8)];
+					end
+					2'd3: begin
+						pixels[(16*i+7):(16*i)]    <= pixels[(16*i+7):(16*i)];
+						pixels[(16*i+15):(16*i+8)] <= cam_d[(8*i+7):8*i];
 					end
 				endcase
 			end
